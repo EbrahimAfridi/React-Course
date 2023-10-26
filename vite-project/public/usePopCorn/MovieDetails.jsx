@@ -1,14 +1,16 @@
-import {useEffect, useState} from "react";
+import {useEffect, useState, useRef } from "react";
 import StarRating from "./StarRating.jsx";
 import Loader from "./Loader.jsx";
-const KEY = "4f1aa1c9";   //API KEY
+import { useKey } from "./useKey";
 
+const KEY = "4f1aa1c9";   //API KEY
 
 export default function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }){
 
   const [movieDetail, setMovieDetail] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [userRating, setUserRating] = useState("");
+  const countRef = useRef(0);
 
   const isWatched = watched.map(movie => movie.imdbID).includes(selectedId);
   console.log(isWatched);
@@ -26,6 +28,7 @@ export default function MovieDetails({ selectedId, onCloseMovie, onAddWatched, w
     Released: released,
     Actors: actors,
     Genre: genre,
+
   } = movieDetail;
 
   function handleAdd() {
@@ -36,28 +39,15 @@ export default function MovieDetails({ selectedId, onCloseMovie, onAddWatched, w
       year,
       imdbRating: Number(imdbRating),
       runtime: Number(runtime.split(" ").at(0)),
-      userRating ,
+      userRating,
+      countRatingDecision: countRef.current,
     };
 
     onAddWatched(newMovie);
     onCloseMovie();
   }
 
-  //Esc key listener
-  useEffect(function (){
-    function callback(e){
-      if(e.code === "Escape"){
-        onCloseMovie();
-      }
-    }
-
-    document.addEventListener("keydown", callback)
-
-    return function() {
-      document.removeEventListener("keydown", callback);
-    }
-
-  }, [onCloseMovie])
+  useKey('Escape', onCloseMovie);     // custom hook
 
   useEffect(function() {
 
@@ -84,6 +74,15 @@ export default function MovieDetails({ selectedId, onCloseMovie, onAddWatched, w
       document.title = "usePopcorn";
     }
   }, [title]);
+
+// updating the countRef
+  useEffect(function(){
+    if(userRating) {
+      countRef.current = countRef.current + 1;
+    }
+  },
+  [userRating]
+  );
 
   return(
     <div className="details">

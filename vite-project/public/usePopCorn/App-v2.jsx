@@ -1,4 +1,4 @@
-import Navbar from "./Navbar"; 
+import Navbar from "./Navbar";
 import Main from "./Main";
 import "./index.css";
 import Search from "./Search.jsx";
@@ -10,8 +10,6 @@ import WatchedSummary from "./WatchedSummary.jsx";
 import WatchedList from "./WatchedList.jsx";
 import Loader from "./Loader.jsx";
 import MovieDetails from "./MovieDetails.jsx";
-import { useMovies } from "./useMovies";
-import { useLocalStorageState } from "./useLocalStorageState";
 
 const tempMovieData = [
   {
@@ -64,15 +62,12 @@ const KEY = "4f1aa1c9";   //API KEY
 export default function PopCorn() {
 
   const [query, setQuery] = useState("");
+  const [movies, setMovies] = useState([]);
+  const [watched, setWatched] = useState([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  
-  // Custom Hook
-  const {movies, isLoading, error} = useMovies(query);
-  const [watched, setWatched] = useLocalStorageState([], "watched");
 
-  
-
-  // const [watched, setWatched] = useState([]);
   function handleSelectId(id){
     setSelectedId((selectedId) => id === selectedId ? null : id);
   }
@@ -88,10 +83,57 @@ export default function PopCorn() {
   function handleDeleteWatched(id) {
     console.log(watched);
     setWatched(watched => watched.filter((movie) => movie.imdbID !== id));
-    // filter means remove the one which satisfies the condition
+  //  filter means remove the one which satisfies the condition
     console.log("delete");
     console.log(watched);
   }
+
+  //fetching API
+  useEffect(function(){
+
+    const controller = new AbortController();
+
+    async function fetchMovies() {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const res = await fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+          {signal: controller.signal});
+
+        if(!res.ok) throw new Error("Something went wrong while fetching :( ");
+
+        const data = await res.json();
+        if(data.Response === "False") throw new Error("Movie not found");     // error message for movie not found
+
+        setMovies(data.Search);
+        setIsLoading(false);
+      }
+      catch (err) {
+          console.error(err.message);
+          if (err.name !== "AbortError"){
+            setError(err.message)
+          }
+      }
+      finally {
+        setIsLoading(false);
+      }
+    }
+
+    if(query.length < 3){
+      setMovies([]);
+      setError("");
+      return;
+    }
+
+    handleCloseMovie();
+    fetchMovies();
+
+    return function(){
+      controller.abort();
+    }
+
+  }, [query]);
 
   return (
     <>
